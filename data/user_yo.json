@@ -1,0 +1,22 @@
+{
+  "name": "yo",
+  "affinity": 30.3,
+  "facts": {
+    "likes": [],
+    "dislikes": [],
+    "notes": []
+  },
+  "chatLog": [
+    {
+      "who": "you",
+      "text": "hello?",
+      "ts": 1786825909.6237037
+    },
+    {
+      "who": "pet",
+      "text": "(...connection to my brain dropped. is llama-server running?)",
+      "ts": 1786825911.685427
+    }
+  ],
+  "created": 1786825897.9889324
+}

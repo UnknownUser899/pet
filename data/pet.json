@@ -1,0 +1,15 @@
+{
+  "petName": "Chip",
+  "traits": {
+    "warmth": 55,
+    "playful": 55,
+    "curious": 55.3,
+    "patient": 55
+  },
+  "mood": {
+    "valence": 60,
+    "energy": 59
+  },
+  "born": 1786825898.0033233,
+  "lastSeen": 1786825911.685428
+}

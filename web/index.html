@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>memory·pet</title>
+<style>
+  :root{
+    --ink:#1C1B17; --shell:#3A362C; --shell-hi:#4C4736;
+    --screen:#CFE3B8; --screen-deep:#B9D19E; --pixel-dark:#34432B; --pixel-mid:#5C7248;
+    --warm:#E0692F; --cool:#4F7A75; --cream:#EFE7D2; --bad:#B5432E;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    background:var(--ink);display:flex;align-items:center;justify-content:center;
+    font-family:ui-monospace,"SFMono-Regular","Cascadia Code","Courier New",monospace;
+    padding:20px;
+  }
+  .device{width:100%;max-width:380px;background:var(--shell);border-radius:26px;
+    padding:16px 16px 20px;box-shadow:0 30px 60px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05);
+    position:relative;}
+  .top{display:flex;align-items:center;justify-content:space-between;padding:2px 6px 12px;}
+  .brand{color:var(--cream);font-size:11px;letter-spacing:.18em;opacity:.75;}
+  .pill{font-size:9px;letter-spacing:.1em;color:var(--pixel-dark);background:var(--screen);
+    padding:3px 7px;border-radius:20px;transition:background .3s,color .3s;}
+  .pill.saved{background:var(--warm);color:var(--cream);}
+
+  .screen{background:var(--screen);border-radius:14px;padding:12px;position:relative;overflow:hidden;
+    box-shadow:inset 0 3px 10px rgba(0,0,0,.35); min-height:340px;}
+  .scanlines{position:absolute;inset:0;pointer-events:none;opacity:.12;
+    background:repeating-linear-gradient(0deg,var(--pixel-dark) 0 1px,transparent 1px 3px);
+    animation:drift 6s linear infinite;}
+  @keyframes drift{from{transform:translateY(0);}to{transform:translateY(3px);}}
+
+  /* ---- profile picker ---- */
+  #picker{position:relative;z-index:1;}
+  #picker h2{margin:6px 0 14px;font-size:12px;color:var(--pixel-dark);letter-spacing:.08em;text-align:center;}
+  .userList{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+  .userBtn{background:var(--screen-deep);border:1px solid var(--pixel-dark);color:var(--pixel-dark);
+    padding:9px 10px;border-radius:8px;font-family:inherit;font-size:12px;cursor:pointer;text-align:left;}
+  .userBtn:hover{background:#c3d9a4;}
+  .newUserRow{display:flex;gap:6px;}
+  #newUserName{flex:1;background:var(--ink);color:var(--screen);border:1px dashed var(--shell-hi);
+    border-radius:8px;padding:9px 10px;font-family:inherit;font-size:12px;min-width:0;}
+
+  /* ---- chat view ---- */
+  #chatView{position:relative;z-index:1;display:none;}
+  .stats{display:flex;gap:6px;margin-bottom:8px;}
+  .stat{flex:1;}
+  .stat-label{font-size:8px;letter-spacing:.12em;color:var(--pixel-dark);display:block;margin-bottom:3px;opacity:.75;}
+  .stat-bar{height:6px;background:var(--screen-deep);border:1px solid var(--pixel-dark);}
+  .stat-fill{height:100%;width:60%;transition:width .5s ease;}
+  #fill-valence{background:var(--warm);} #fill-energy{background:var(--cool);} #fill-affinity{background:var(--pixel-mid);}
+
+  .traits{font-size:9px;color:var(--pixel-dark);opacity:.75;text-align:center;margin-bottom:6px;}
+
+  .stage{display:flex;flex-direction:column;align-items:center;padding:2px 0 8px;}
+  .stage svg{width:96px;height:96px;}
+  .eye{fill:var(--pixel-mid);transform-origin:center;animation:blink 5s ease-in-out infinite;}
+  .eye.r{animation-delay:.15s;}
+  @keyframes blink{0%,92%,100%{transform:scaleY(1);}94%{transform:scaleY(.1);}96%{transform:scaleY(1);}}
+  svg[data-mood="low"] .eye{fill:var(--bad);}
+  svg[data-mood="neutral"] .eye{fill:var(--warm);}
+  svg[data-mood="high"] .eye{fill:var(--pixel-mid);}
+  .mouth{stroke:var(--pixel-dark);stroke-width:2.5;fill:none;stroke-linecap:round;display:none;}
+  svg[data-mood="high"] .mouth.up{display:block;}
+  svg[data-mood="neutral"] .mouth.flat{display:block;}
+  svg[data-mood="low"] .mouth.down{display:block;}
+  .chip-body{fill:var(--pixel-dark);} .pin{fill:var(--pixel-mid);} .notch{fill:var(--screen);}
+
+  .log{height:96px;overflow-y:auto;font-size:11px;line-height:1.5;color:var(--pixel-dark);padding-right:2px;}
+  .log p{margin:0 0 4px;}
+  .log .you{opacity:.65;text-align:right;}
+  .log .pet::before{content:"▮ ";}
+  .log .typing{opacity:.5;font-style:italic;}
+
+  .memory{display:flex;align-items:center;gap:6px;margin-top:6px;padding-top:8px;border-top:1px dashed var(--pixel-dark);opacity:.85;}
+  .dot{width:6px;height:6px;background:var(--screen-deep);border:1px solid var(--pixel-dark);}
+  .dot.on{background:var(--pixel-dark);}
+  .mem-count{font-size:9px;color:var(--pixel-dark);letter-spacing:.05em;}
+
+  .tray{display:flex;gap:6px;margin-top:12px;}
+  #chatInput{flex:1;background:var(--ink);color:var(--screen);border:1px dashed var(--shell-hi);
+    border-radius:8px;padding:9px 10px;font-family:inherit;font-size:12px;min-width:0;}
+  #chatInput:focus-visible{outline:2px solid var(--warm);outline-offset:1px;}
+  #chatInput::placeholder{color:var(--screen-deep);}
+  button{font-family:inherit;font-size:10px;letter-spacing:.06em;cursor:pointer;
+    background:var(--shell-hi);color:var(--cream);border:none;border-radius:8px;padding:9px 12px;}
+  button:active{transform:translateY(1px);}
+  button:focus-visible{outline:2px solid var(--warm);outline-offset:1px;}
+  .switchRow{margin-top:8px;text-align:center;}
+  .switchRow button{background:none;color:var(--cream);opacity:.5;font-size:9px;padding:4px;}
+
+  .hint{margin-top:10px;text-align:center;font-size:9px;color:var(--cream);opacity:.4;}
+
+  @media (prefers-reduced-motion: reduce){ .scanlines{animation:none;} .eye{animation:none;} }
+</style>
+</head>
+<body>
+<div class="device">
+  <div class="top">
+    <span class="brand">MEMORY·PET</span>
+    <span class="pill" id="pill">LAN</span>
+  </div>
+
+  <div class="screen">
+    <div class="scanlines"></div>
+
+    <div id="picker">
+      <h2>who's there?</h2>
+      <div class="userList" id="userList"></div>
+      <div class="newUserRow">
+        <input id="newUserName" placeholder="new name..." maxlength="30" />
+        <button id="newUserBtn">ADD</button>
+      </div>
+    </div>
+
+    <div id="chatView">
+      <div class="stats">
+        <div class="stat"><span class="stat-label">MOOD</span><div class="stat-bar"><div class="stat-fill" id="fill-valence"></div></div></div>
+        <div class="stat"><span class="stat-label">ENERGY</span><div class="stat-bar"><div class="stat-fill" id="fill-energy"></div></div></div>
+        <div class="stat"><span class="stat-label">BOND</span><div class="stat-bar"><div class="stat-fill" id="fill-affinity"></div></div></div>
+      </div>
+      <div class="traits" id="traits"></div>
+
+      <div class="stage">
+        <svg id="pet" viewBox="0 0 100 100" data-mood="neutral">
+          <rect class="chip-body" x="20" y="18" width="60" height="58" rx="6"/>
+          <circle class="notch" cx="28" cy="26" r="3"/>
+          <rect class="pin" x="24" y="74" width="5" height="11" rx="1"/>
+          <rect class="pin" x="34" y="74" width="5" height="11" rx="1"/>
+          <rect class="pin" x="44" y="74" width="5" height="11" rx="1"/>
+          <rect class="pin" x="52" y="74" width="5" height="11" rx="1"/>
+          <rect class="pin" x="62" y="74" width="5" height="11" rx="1"/>
+          <rect class="pin" x="71" y="74" width="5" height="11" rx="1"/>
+          <circle class="eye l" cx="40" cy="42" r="5.5"/>
+          <circle class="eye r" cx="60" cy="42" r="5.5"/>
+          <path class="mouth up" d="M40 58 Q50 66 60 58"/>
+          <path class="mouth flat" d="M40 60 H60"/>
+          <path class="mouth down" d="M40 62 Q50 54 60 62"/>
+        </svg>
+      </div>
+
+      <div class="log" id="log"></div>
+
+      <div class="memory">
+        <div id="dots" style="display:flex;gap:3px;"></div>
+        <span class="mem-count" id="memCount">0 memories</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="chatControls" style="display:none;">
+    <div class="tray">
+      <input id="chatInput" placeholder="say something..." maxlength="200" />
+      <button id="sendBtn">TALK</button>
+    </div>
+    <div class="switchRow"><button id="switchBtn">switch user</button></div>
+  </div>
+
+  <p class="hint" id="hint">local network only · no cloud · needs llama-server running</p>
+</div>
+
+<script>
+(function(){
+  const API = ""; // same origin as this page (PC or phone on same wifi)
+  let currentUser = null;
+
+  async function api(path, opts){
+    const res = await fetch(API + path, opts);
+    return res.json();
+  }
+
+  async function loadUsers(){
+    const users = await api("/api/users");
+    const list = document.getElementById("userList");
+    list.innerHTML = "";
+    users.forEach(u => {
+      const b = document.createElement("button");
+      b.className = "userBtn";
+      b.textContent = u.name;
+      b.addEventListener("click", () => selectUser(u.id));
+      list.appendChild(b);
+    });
+  }
+
+  document.getElementById("newUserBtn").addEventListener("click", async () => {
+    const input = document.getElementById("newUserName");
+    const name = input.value.trim();
+    if(!name) return;
+    const u = await api("/api/users", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({name})});
+    input.value = "";
+    selectUser(u.id);
+  });
+
+  async function selectUser(uid){
+    currentUser = uid;
+    document.getElementById("picker").style.display = "none";
+    document.getElementById("chatView").style.display = "block";
+    document.getElementById("chatControls").style.display = "block";
+    const state = await api("/api/state?uid=" + encodeURIComponent(uid));
+    render(state.pet, state.user);
+  }
+
+  document.getElementById("switchBtn").addEventListener("click", () => {
+    currentUser = null;
+    document.getElementById("picker").style.display = "block";
+    document.getElementById("chatView").style.display = "none";
+    document.getElementById("chatControls").style.display = "none";
+    loadUsers();
+  });
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  function mood(pet){
+    const avg = (pet.mood.valence + pet.mood.energy) / 2;
+    if(avg > 65) return "high";
+    if(avg > 35) return "neutral";
+    return "low";
+  }
+
+  function render(pet, user){
+    document.getElementById("fill-valence").style.width = pet.mood.valence + "%";
+    document.getElementById("fill-energy").style.width = pet.mood.energy + "%";
+    document.getElementById("fill-affinity").style.width = user.affinity + "%";
+    document.getElementById("pet").setAttribute("data-mood", mood(pet));
+    const t = pet.traits;
+    document.getElementById("traits").textContent =
+      `warm ${t.warmth.toFixed(0)} · playful ${t.playful.toFixed(0)} · curious ${t.curious.toFixed(0)} · patient ${t.patient.toFixed(0)}`;
+
+    const log = document.getElementById("log");
+    log.innerHTML = user.chatLog.slice(-14).map(m => `<p class="${m.who}">${escapeHtml(m.text)}</p>`).join("");
+    log.scrollTop = log.scrollHeight;
+
+    const count = user.facts.likes.length + user.facts.dislikes.length + user.facts.notes.length;
+    const dotsEl = document.getElementById("dots");
+    dotsEl.innerHTML = "";
+    for(let i=0;i<8;i++){
+      const d = document.createElement("div");
+      d.className = "dot" + (i < Math.min(count,8) ? " on" : "");
+      dotsEl.appendChild(d);
+    }
+    document.getElementById("memCount").textContent = count + (count>=8?"+":"") + " memories";
+
+    const pill = document.getElementById("pill");
+    pill.classList.add("saved");
+    setTimeout(()=>pill.classList.remove("saved"), 400);
+  }
+
+  async function send(){
+    const input = document.getElementById("chatInput");
+    const text = input.value.trim();
+    if(!text || !currentUser) return;
+    input.value = "";
+    input.disabled = true;
+    const log = document.getElementById("log");
+    log.insertAdjacentHTML("beforeend", `<p class="you">${escapeHtml(text)}</p><p class="pet typing" id="typingLine">...</p>`);
+    log.scrollTop = log.scrollHeight;
+    try{
+      const data = await api("/api/chat", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({uid:currentUser, message:text})});
+      document.getElementById("typingLine")?.remove();
+      render(data.pet, data.user);
+    }catch(e){
+      document.getElementById("typingLine").textContent = "(...couldn't reach the server.)";
+    }
+    input.disabled = false;
+    input.focus();
+  }
+  document.getElementById("sendBtn").addEventListener("click", send);
+  document.getElementById("chatInput").addEventListener("keydown", e => { if(e.key === "Enter") send(); });
+
+  loadUsers();
+})();
+</script>
+</body>
+</html>
